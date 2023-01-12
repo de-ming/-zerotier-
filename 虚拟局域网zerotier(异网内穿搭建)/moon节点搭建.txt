@@ -1,0 +1,73 @@
+一、服务器端moon的搭建
+1.安装 moon,zerotier官方提供了比较方便的安装方式,一条命令即可完成:
+
+curl -s https://install.zerotier.com/ | sudo bash
+
+
+2.生成moon配置文件
+
+cd /var/lib/zerotier-one  #安装好zerotier后,自动会安装到此目录
+
+sudo zerotier-idtool initmoon identity.public > moon.json         #该命令将id文件转换为能用于配置的json
+
+
+3. 修改配置文件moon.json，主要是添加公网IP，修改内容如下, 9993是默认端口，该配置里面,有一个id字段,10个字符,如: ["id": "18fasd2319"],  就是moon的id, 在客户端连接时,需要用到它.
+
+vi moon.json
+
+"stableEndpoints": [ "101.34.250.23/9993" ]		#101.34.250.23改成自己服务器的ip
+
+
+4.生成moon文件
+
+sudo zerotier-idtool genmoon moon.json 
+
+执行该命令后,会在在/var/lib/zerotier-one目录下生成一个类似00000018fasd2319.moon的文件 这个文件非常重要,所有的客户端要连接上moon都是依靠该文件关联的
+
+5.使moon配置文件生效:
+
+在/var/lib/zerotier-one目录下,新建一个 moons.d 文件夹，并将刚生成的moon配置文件放到该文件夹下
+
+mkdir moons.d
+mv 00000018fasd2319.moon moons.d/   	#00000018fasd2319.moon要修改成自己生成的文件名
+
+6. 重新启动moon服务器,由于使用命令安装时会自动注册为服务,所以可以依靠以下命令完成启动或重启
+
+service zerotier-one restart   #(服务重启命令)	执行一句即可
+/etc/init.d/zerotier-one restart  #(服务重启命令)
+service zerotier-one start #(服务启动命令)
+zerotier-one -d #或直接程序启动
+
+经过以上配置,服务器上的moon即配置并应用完闭.
+服务器记得开放9993的tcp和udp端口
+
+
+二、客户端连接并使用服务器上的Moon
+
+接下来就需要在各客户端zerotier上配置,并连接此服务器,
+有两种方法可以完成.
+
+方法1.
+Linux:  直接在zerotier目录下,创建moons.d文件夹,并且将生成的00000018fasd2319.moon文件拷入,并重启服务即可.
+
+Windows(10):由于大部分人常用环境都是windows,所以此处着重对在windows环境下的配置说明下:
+
+打开服务程序services.msc, 找到服务"ZeroTier One", 并且在属性内找到该服务可执行文件路径,我的环境下为C:\ProgramData\ZeroTier\One\zerotier-one_x64.exe, 打开该文件夹, 并且在其下建立moons.d文件夹,然后将moon服务器下生成的000xxxx.moon文件,拷贝到此文件夹内..再重启该服务即可..
+(注,此处重启的是该项服务,不是电脑右下角的图标程序..网上大多资料都没法特别说明,或者含糊没说清,甚至重启电脑之类的说法都说出来了,比较马虎..右下角任务栏程序路径是在C:\Program Files (x86)\ZeroTier\One目录下,而服务路径却并非在该路径,若将moons.d文件夹放不对位置,是无法连上Moon服务器的.)
+
+方法2.
+只需执行此命令即可,此处需要输入两遍id:
+
+zerotier-cli orbit e714a7d968 e714a7d968	#其中 e714a7d968 e714a7d968 要修改成自己moon的id
+
+(此种方法依赖zerotier的根服务器,若根服务器连接不上,则会无效,由于不确定性, 所以本人更喜欢方法1..这个看个人情况而定,适用就好...)
+
+ 
+要验证是否moon生效,只需要在客户端zerotier程序目录下,执行以下命令即可:
+zerotier-cli listpeers
+
+若有类似地址,即可证明moon连接成功
+
+200 listpeers e714a7d968 101.34.250.23/9993;9630;9604 27 1.10.2 MOON
+
+
